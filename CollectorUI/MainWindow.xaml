@@ -1,0 +1,137 @@
+﻿<Window x:Class="CollectorUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CollectorUI"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800" Closed="Window_Closed">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+
+        <TextBox Name="tbTaskName" Grid.Row="0" Margin="5" FontSize="30" FontWeight="Bold">Untitled</TextBox>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Train">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="50"></RowDefinition>
+                    </Grid.RowDefinitions>
+
+                    <Grid Height="100" VerticalAlignment="Top" Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="100"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition></RowDefinition>
+                            <RowDefinition></RowDefinition>
+                            <RowDefinition></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <Label Grid.Column="0" Grid.Row="0">Source</Label>
+                        <Label Grid.Column="0" Grid.Row="1">Working</Label>
+                        <TextBox Grid.Row="0" Grid.Column="1" Name="tbImage"></TextBox>
+                        <TextBox Grid.Row="1" Grid.Column="1" Name="tbWorking"></TextBox>
+                        <Button Grid.Row="0" Grid.Column="2" Name="btBrowseImage" Click="btBrowseImage_Click">Browse</Button>
+                        <Button Grid.Row="1" Grid.Column="2" Name="btBrowseWorking" Click="btBrowseWorking_Click">Browse</Button>
+                    </Grid>
+
+                    <Button Grid.Row="1" Name="btTrain" Width="200" Height="50" Click="btTrain_Click">Train</Button>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Test">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <Grid Height="30" VerticalAlignment="Top" Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="12"></ColumnDefinition>
+                            <ColumnDefinition Width="88"/>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="100"></ColumnDefinition>
+                            <ColumnDefinition Width="100"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Grid.ColumnSpan="2" >Image</Label>
+                        <TextBox Grid.Column="2" Name="tbTestImage"></TextBox>
+                        <Button Grid.Column="3" Name="btBrowseTestImage" Click="btBrowseTestImage_Click">Browse</Button>
+                        <Button Grid.Column="4" Name="btTest" FontWeight="Bold" Click="btTest_Click">Test</Button>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Background="#002255">
+                        <Viewbox>
+                            <Image Name="imgTest"></Image>
+                        </Viewbox>
+                        <Label Foreground="#DDBB00" HorizontalAlignment="Stretch" Background="#55000000" Height="50" VerticalAlignment="Top" FontSize="20" Name="lbTestResult">-- (0.0)</Label>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="YouTube" IsSelected="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="30"></RowDefinition>
+                        <RowDefinition Height="150"></RowDefinition>
+                        <RowDefinition Height="*"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="50"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="50"></ColumnDefinition>
+                            <ColumnDefinition Width="50"></ColumnDefinition>
+                            <ColumnDefinition Width="50"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Name="tbxYouTubeKey"></TextBox>
+                        <Label Grid.Column="1">Group</Label>
+                        <TextBox Grid.Column="2" Name="tbxGroup"></TextBox>
+                        <Label Grid.Column="3">Pass</Label>
+                        <TextBox Grid.Column="4" Name="tbxPass">0.95</TextBox>
+                        <Button Grid.Column="5" Name="btStartYouTube" Click="btStartYouTube_Click">Go</Button>                        
+                    </Grid>
+                    <Grid Grid.Row="1">                        
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"></ColumnDefinition>
+                                <ColumnDefinition Width="*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Viewbox Grid.Column="0">
+                                <Image Name="imgYouTubeCurrent"></Image>
+                            </Viewbox>
+                            <Grid Grid.Column="1">
+                                <StackPanel Orientation="Vertical">
+                                    <Label Name="lbYouTubeCurrent"></Label>
+                                    <Label Name="lbYouTubeCurrentScore" FontSize="20" FontWeight="Bold"></Label>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>                   
+                        <ProgressBar Name="pbYouTube" Height="10" VerticalAlignment="Bottom"></ProgressBar>
+                    </Grid>
+                    <ListBox Grid.Row="2" Name="lbxYouTubeResults">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Image Width="128" Height="128" Source="{Binding Thumbnail}"></Image>
+                                    <StackPanel Orientation="Vertical">
+                                        <Label FontWeight="Bold" Content="{Binding Title}"></Label>
+                                        <Label Content="{Binding Time}"></Label>
+                                        <Label FontWeight="Bold" FontSize="20" Content="{Binding Score}"></Label>
+                                    </StackPanel>                                    
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+    </Grid>
+</Window>
