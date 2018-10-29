@@ -75,61 +75,7 @@
             </TabItem>
 
             <TabItem Header="YouTube" IsSelected="True">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="30"></RowDefinition>
-                        <RowDefinition Height="150"></RowDefinition>
-                        <RowDefinition Height="*"></RowDefinition>
-                    </Grid.RowDefinitions>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"></ColumnDefinition>
-                            <ColumnDefinition Width="50"></ColumnDefinition>
-                            <ColumnDefinition Width="*"></ColumnDefinition>
-                            <ColumnDefinition Width="50"></ColumnDefinition>
-                            <ColumnDefinition Width="50"></ColumnDefinition>
-                            <ColumnDefinition Width="50"></ColumnDefinition>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Name="tbxYouTubeKey"></TextBox>
-                        <Label Grid.Column="1">Group</Label>
-                        <TextBox Grid.Column="2" Name="tbxGroup"></TextBox>
-                        <Label Grid.Column="3">Pass</Label>
-                        <TextBox Grid.Column="4" Name="tbxPass">0.95</TextBox>
-                        <Button Grid.Column="5" Name="btStartYouTube" Click="btStartYouTube_Click">Go</Button>                        
-                    </Grid>
-                    <Grid Grid.Row="1">                        
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200"></ColumnDefinition>
-                                <ColumnDefinition Width="*"></ColumnDefinition>
-                            </Grid.ColumnDefinitions>
-                            <Viewbox Grid.Column="0">
-                                <Image Name="imgYouTubeCurrent"></Image>
-                            </Viewbox>
-                            <Grid Grid.Column="1">
-                                <StackPanel Orientation="Vertical">
-                                    <Label Name="lbYouTubeCurrent"></Label>
-                                    <Label Name="lbYouTubeCurrentScore" FontSize="20" FontWeight="Bold"></Label>
-                                </StackPanel>
-                            </Grid>
-                        </Grid>                   
-                        <ProgressBar Name="pbYouTube" Height="10" VerticalAlignment="Bottom"></ProgressBar>
-                    </Grid>
-                    <ListBox Grid.Row="2" Name="lbxYouTubeResults">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Width="128" Height="128" Source="{Binding Thumbnail}"></Image>
-                                    <StackPanel Orientation="Vertical">
-                                        <Label FontWeight="Bold" Content="{Binding Title}"></Label>
-                                        <Label Content="{Binding Time}"></Label>
-                                        <Label FontWeight="Bold" FontSize="20" Content="{Binding Score}"></Label>
-                                    </StackPanel>                                    
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
+                <local:YouTubePanel></local:YouTubePanel>
             </TabItem>
         </TabControl>
 

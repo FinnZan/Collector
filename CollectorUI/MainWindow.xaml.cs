@@ -1,15 +1,12 @@
 ﻿using Dell.Utilities;
 using System;
 using System.IO;
-using System.Threading;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 
 namespace CollectorUI
 {
-
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -17,11 +14,7 @@ namespace CollectorUI
     {
         private FolderBrowserDialog _folderBrowserDialog = new FolderBrowserDialog();
         private OpenFileDialog _openFileDialog = new OpenFileDialog();
-
-        private Classifier _classifier = null;
-
-        private YouTubeCrawler _youTubeCrawler = null;
-
+               
         private string _pythonDir;
 
         public MainWindow()
@@ -34,12 +27,16 @@ namespace CollectorUI
 
             tbImage.Text = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "images");
             tbWorking.Text = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "working");
-
+            
             ReadPreference();
+
+            Global.WorkingFolder = tbWorking.Text;
 
             CommonTools.Log($"Python [{_pythonDir}]");
 
-            _folderBrowserDialog.SelectedPath = tbWorking.Text;
+            _folderBrowserDialog.SelectedPath = Global.WorkingFolder;
+
+            Global.Classifier = new Classifier(tbTaskName.Text, tbImage.Text, Global.WorkingFolder, _pythonDir);
         }
 
         private void btBrowseImage_Click(object sender, RoutedEventArgs e)
@@ -57,6 +54,7 @@ namespace CollectorUI
             if (!string.IsNullOrEmpty(ret))
             {
                 tbWorking.Text = ret;
+                Global.WorkingFolder = tbWorking.Text;
             }
         }
 
@@ -68,20 +66,18 @@ namespace CollectorUI
                 return;
             }
 
-            if (!Directory.Exists(tbWorking.Text))
+            if (!Directory.Exists(Global.WorkingFolder))
             {
                 System.Windows.MessageBox.Show("Working folder does not exist");
                 return;
             }
-
-            _classifier = new Classifier(tbTaskName.Text, tbImage.Text, tbWorking.Text, _pythonDir);
-            _classifier.Train();
+            
+            Global.Classifier.Train();
         }
 
         private void btTest_Click(object sender, RoutedEventArgs e)
         {
-            _classifier = new Classifier(tbTaskName.Text, tbImage.Text, tbWorking.Text, _pythonDir);
-            var ret = _classifier.Test(tbTestImage.Text);
+            var ret = Global.Classifier.Test(tbTestImage.Text);
             
             lbTestResult.Content = $"{ret.Scores[0].Key} ({ret.Scores[0].Value})";
         }
@@ -104,7 +100,7 @@ namespace CollectorUI
         private void Window_Closed(object sender, EventArgs e)
         {
             SavePreference();
-            _classifier?.Stop();
+            Global.Classifier?.Stop();
             Environment.Exit(0);
         }
 
@@ -135,7 +131,7 @@ namespace CollectorUI
         private void SavePreference()
         {
             var pref = $"IMAGES {tbImage.Text}\n";
-            pref += $"WORKING {tbWorking.Text}\n";
+            pref += $"WORKING {Global.WorkingFolder}\n";
             pref += $"TITLE {tbTaskName.Text}\n";
             pref += $"PYTHON {_pythonDir}\n";
 
@@ -158,6 +154,7 @@ namespace CollectorUI
                         if (name.Equals("WORKING"))
                         {
                             tbWorking.Text = value.Trim();
+                            Global.WorkingFolder = tbWorking.Text;
                         }
 
                         if (name.Equals("PYTHON"))
@@ -177,78 +174,6 @@ namespace CollectorUI
                     }
                 }
             }
-        }
-
-        private void btStartYouTube_Click(object sender, RoutedEventArgs e)
-        {
-            lbxYouTubeResults.ItemsSource = null;
-            lbYouTubeCurrent.Content = string.Empty;
-            lbYouTubeCurrentScore.Content = string.Empty;
-
-            _classifier = new Classifier(tbTaskName.Text, tbImage.Text, tbWorking.Text, _pythonDir);
-
-            if (_youTubeCrawler == null)
-            {
-                _youTubeCrawler = new YouTubeCrawler(_classifier, tbWorking.Text);
-            }
-
-            lbxYouTubeResults.SelectionChanged += new System.Windows.Controls.SelectionChangedEventHandler((object o, SelectionChangedEventArgs args) =>
-            {
-                new Thread(()=> { System.Diagnostics.Process.Start(((VideoFrame)lbxYouTubeResults.SelectedItem).Url); }).Start();
-            });
-
-            _youTubeCrawler.ProgressChanged += new EventHandler<YouTubeCrawlerProgress>((object o, YouTubeCrawlerProgress p) =>
-            {
-                lbxYouTubeResults.Dispatcher.BeginInvoke((Action)(() =>
-                {
-                    BitmapImage f = new BitmapImage();
-                    f.BeginInit();
-                    f.UriSource = new Uri(p.Latest.Thumbnail);
-                    f.EndInit();
-                    imgYouTubeCurrent.Source = f;
-
-                    lbYouTubeCurrent.Content = $"Video {p.Current+1}/{p.Total} Frame {p.Latest.FrameIndex}\n{p.Latest.Title}\n{p.Latest.Time}\n";
-
-                    if (p.Latest.Score == null)
-                    {
-                        lbYouTubeCurrentScore.Content = $"Validating....";
-                    }
-                    else
-                    {
-                        lbYouTubeCurrentScore.Content = $"{p.Latest.Score}";
-                    }
-                    
-                    pbYouTube.Maximum = p.Total;
-                    pbYouTube.Minimum = 0;
-                    pbYouTube.Value = p.Current;
-
-                    lbxYouTubeResults.ItemsSource = null;
-                    lbxYouTubeResults.ItemsSource = _youTubeCrawler.Results;
-                }));
-            });
-
-            var key = tbxYouTubeKey.Text;
-            var group = tbxGroup.Text;
-            var pass = double.Parse(tbxPass.Text);
-
-            new Thread(() =>
-            {
-                try
-                {
-                    var results = _youTubeCrawler.Search(key, group, pass);
-
-                    CommonTools.Log("Done.");
-
-                    lbxYouTubeResults.Dispatcher.BeginInvoke((Action)(() =>
-                    {
-                        lbxYouTubeResults.ItemsSource = results;
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    CommonTools.HandleException(ex);
-                }
-            }).Start();
-        }
+        }             
     }
 }
