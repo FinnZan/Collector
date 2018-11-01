@@ -43,12 +43,36 @@ namespace CollectorUI
             var pass = double.Parse(tbxPass.Text);
             var days = int.Parse(tbxDays.Text);
 
-            var youTubeCrawler = new YouTubeCrawler(Global.Classifier, Global.WorkingFolder);            
+            var youTubeCrawler = new YouTubeCrawler(Global.Classifier, Global.WorkingFolder);                                  
+            
+            List<SearchHistory> toSearch = new List<SearchHistory>();
+            var history = ReadSearchHistory();
+
+            if (string.IsNullOrEmpty(tbxYouTubeKey.Text))
+            {
+                toSearch = history;
+            }
+            else
+            {
+                var k = new SearchHistory()
+                {
+                    Keyword = tbxYouTubeKey.Text.Trim(),
+                    LastUpdated = DateTime.Now - TimeSpan.FromDays(days)
+                };
+                
+                if (!history.Any(s => s.Keyword == k.Keyword))
+                {
+                    history.Add(k);
+                }
+                toSearch.Add(k);
+            }
 
             youTubeCrawler.ProgressChanged += new EventHandler<YouTubeCrawlerProgress>((object o, YouTubeCrawlerProgress p) =>
             {
                 lbxYouTubeResults.Dispatcher.Invoke((Action)(() =>
                 {
+                    SaveSearchHistory(history);
+
                     try
                     {
                         BitmapImage f = new BitmapImage();
@@ -88,31 +112,8 @@ namespace CollectorUI
                     pbYouTube.Value = p.Current;
                 }));
             });
-            
-            List<SearchHistory> toSearch = new List<SearchHistory>();
-            var history = ReadSearchHistory();
-
-            if (string.IsNullOrEmpty(tbxYouTubeKey.Text))
-            {
-                toSearch = history;
-            }
-            else
-            {
-                var k = new SearchHistory()
-                {
-                    Keyword = tbxYouTubeKey.Text.Trim(),
-                    LastUpdated = DateTime.Now - TimeSpan.FromDays(days)
-                };
-                
-                if (!history.Any(s => s.Keyword == k.Keyword))
-                {
-                    history.Add(k);
-                }
-                toSearch.Add(k);
-            }
 
             // UI ==========================
-
             _youtubeResults.Clear();
             lbYouTubeCurrent.Content = string.Empty;
             lbYouTubeCurrentScore.Content = string.Empty;
@@ -158,7 +159,7 @@ namespace CollectorUI
                             DateTime? date = null;
                             try
                             {
-                                date = DateTime.ParseExact(strDate, "yyyyMMdd-HH:mm", null);
+                                date = DateTime.ParseExact(strDate, "yyyyMMdd-HH:mm:ss", null);
                             }
                             catch (Exception ex)
                             {
@@ -197,7 +198,7 @@ namespace CollectorUI
                 var toSave = new List<string>();
                 foreach (var s in searchHistory)
                 {
-                    toSave.Add(s.LastUpdated.ToString("yyyyMMdd-HH:mm") + " " + s.Keyword);
+                    toSave.Add(s.LastUpdated.ToString("yyyyMMdd-HH:mm:ss") + " " + s.Keyword);
                 }
                 CommonTools.Log($"Saving [{toSave.Count}] keys.");
                 File.WriteAllLines("keywords.txt", toSave);

@@ -89,73 +89,81 @@ namespace CollectorUI
                 {
                     CommonTools.Log($"Search [{key.Keyword}]");
 
+                    var searchTime = DateTime.Now;
                     var searchResults = FindVideo(key.Keyword, key.LastUpdated);
 
-                    key.LastUpdated = searchResults[0].Snippet.PublishedAt.Value;                                        
-
                     CommonTools.Log(searchResults.Count() + " videos.");
-                    
-                    for (int i = 0; i < searchResults.Count() && localCurrentSearchId == CurrentSearchId; i++)
+
+                    for (int i = searchResults.Count() - 1; i >= 0 && localCurrentSearchId == CurrentSearchId; i--)
                     {
                         var s = searchResults[i];
                         CommonTools.Log($"Video [{i}]");
 
-                        for (int j = 0; j < 2; j++)
+                        VideoFrame[] frames = new VideoFrame[4];
+                        for (int j = 0; j < 4; j++)
+                        {
+                            var urlThumb = "http://" + $"img.youtube.com/vi/{s.Id.VideoId}/{j}.jpg";
+
+                            var thumb = Path.Combine(_tempFolder, $"{s.Id.VideoId}_{j}.jpg");
+
+                            HttpWebRequest httpRequest = (HttpWebRequest)
+                            WebRequest.Create(urlThumb);
+                            httpRequest.Method = WebRequestMethods.Http.Get;
+
+                            using (Stream output = File.OpenWrite(thumb))
+                            using (Stream input = httpRequest.GetResponse().GetResponseStream())
+                            {
+                                input.CopyTo(output);
+                            }
+
+                            frames[j] = new VideoFrame()
+                            {
+                                Title = s.Snippet.Title,
+                                Time = s.Snippet.PublishedAt.Value,
+                                Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
+                                Thumbnail = thumb,
+                                FrameIndex = j
+                            };
+                        }
+
+                        if (localCurrentSearchId == CurrentSearchId)
+                        {
+                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
+                            {
+                                Keyword = key.Keyword,
+                                Latest = frames[0],
+                                Total = searchResults.Count(),
+                                Current = searchResults.Count() - i - 1,
+                            });
+                        }
+
+                        Parallel.ForEach(frames, (frame) =>
                         {
                             try
-                            {
-                                var urlThumb = "http://" + $"img.youtube.com/vi/{s.Id.VideoId}/{j}.jpg";
-                                var thumb = Path.Combine(_tempFolder, $"{s.Id.VideoId}_{j}.jpg");
-
-                                HttpWebRequest httpRequest = (HttpWebRequest)
-                                WebRequest.Create(urlThumb);
-                                httpRequest.Method = WebRequestMethods.Http.Get;
-
-                                using (Stream output = File.OpenWrite(thumb))
-                                using (Stream input = httpRequest.GetResponse().GetResponseStream())
-                                {
-                                    input.CopyTo(output);
-                                }
-
-                                var v = new VideoFrame()
-                                {
-                                    Title = s.Snippet.Title,
-                                    Time = s.Snippet.PublishedAt.Value,
-                                    Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
-                                    Thumbnail = thumb,
-                                    FrameIndex = j
-                                };
-
-                                if (localCurrentSearchId == CurrentSearchId)
-                                {
-                                    ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
-                                    {
-                                        Keyword = key.Keyword,
-                                        Latest = v,
-                                        Total = searchResults.Count(),
-                                        Current = i,
-                                    });
-                                }
-
-                                v.TestResult = _classifier.Test(thumb);
-
-                                if (localCurrentSearchId == CurrentSearchId)
-                                {
-                                    ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
-                                    {
-                                        Keyword = key.Keyword,
-                                        Latest = v,
-                                        Total = searchResults.Count(),
-                                        Current = i,
-                                    });
-                                }
+                            {                                 
+                                frame.TestResult = _classifier.Test(frame.Thumbnail); ;                              
                             }
                             catch (Exception ex)
                             {
                                 CommonTools.HandleException(ex);
                             }
+                        });
+
+                        if (localCurrentSearchId == CurrentSearchId)
+                        {
+                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
+                            {
+                                Keyword = key.Keyword,
+                                Latest = frames[0],
+                                Total = searchResults.Count(),
+                                Current = searchResults.Count() - i - 1,
+                            });
                         }
+
+                        key.LastUpdated = s.Snippet.PublishedAt.Value;
                     }
+
+                    key.LastUpdated = searchTime;
                 }
             });
         }
@@ -170,9 +178,9 @@ namespace CollectorUI
 
             List<SearchResult> all = new List<SearchResult>();
             var oldestFound = DateTime.Now;
-            var num = 1;
+            var num = 50;
 
-            do
+            while (num >= 40) 
             {
                 var searchListRequest = youtubeService.Search.List("snippet");
                 searchListRequest.Q = key; // Replace with your search term.
@@ -185,11 +193,12 @@ namespace CollectorUI
                 var items = searchListResponse.Items.Where(s => s.Id.Kind == "youtube#video").ToArray();
                 num = items.Length;
 
-                oldestFound = items[items.Length - 1].Snippet.PublishedAt.Value;
-
-                all.AddRange(items);
-            }
-            while (num >= 40);
+                if (items.Length > 0)
+                {
+                    oldestFound = items[items.Length - 1].Snippet.PublishedAt.Value;
+                    all.AddRange(items);
+                }
+            }            
 
             return all;
         }
