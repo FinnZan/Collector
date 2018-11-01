@@ -26,7 +26,7 @@ namespace CollectorUI
 
         public int Current { get; set; }
 
-        public VideoFrame Latest { get; set; }
+        public VideoFrame[] Frames { get; set; }
     }
 
     public class VideoFrame
@@ -96,71 +96,78 @@ namespace CollectorUI
 
                     for (int i = searchResults.Count() - 1; i >= 0 && localCurrentSearchId == CurrentSearchId; i--)
                     {
-                        var s = searchResults[i];
-                        CommonTools.Log($"Video [{i}]");
-
-                        VideoFrame[] frames = new VideoFrame[4];
-                        for (int j = 0; j < 4; j++)
+                        try
                         {
-                            var urlThumb = "http://" + $"img.youtube.com/vi/{s.Id.VideoId}/{j}.jpg";
+                            var s = searchResults[i];
+                            CommonTools.Log($"Video [{i}]");
 
-                            var thumb = Path.Combine(_tempFolder, $"{s.Id.VideoId}_{j}.jpg");
-
-                            HttpWebRequest httpRequest = (HttpWebRequest)
-                            WebRequest.Create(urlThumb);
-                            httpRequest.Method = WebRequestMethods.Http.Get;
-
-                            using (Stream output = File.OpenWrite(thumb))
-                            using (Stream input = httpRequest.GetResponse().GetResponseStream())
+                            VideoFrame[] frames = new VideoFrame[4];
+                            for (int j = 0; j < 4; j++)
                             {
-                                input.CopyTo(output);
+                                var urlThumb = "http://" + $"img.youtube.com/vi/{s.Id.VideoId}/{j}.jpg";
+
+                                var thumb = Path.Combine(_tempFolder, $"{s.Id.VideoId}_{j}.jpg");
+
+                                HttpWebRequest httpRequest = (HttpWebRequest)
+                                WebRequest.Create(urlThumb);
+                                httpRequest.Method = WebRequestMethods.Http.Get;
+
+                                using (Stream output = File.OpenWrite(thumb))
+                                using (Stream input = httpRequest.GetResponse().GetResponseStream())
+                                {
+                                    input.CopyTo(output);
+                                }
+
+                                frames[j] = new VideoFrame()
+                                {
+                                    Title = s.Snippet.Title,
+                                    Time = s.Snippet.PublishedAt.Value,
+                                    Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
+                                    Thumbnail = thumb,
+                                    FrameIndex = j
+                                };
                             }
 
-                            frames[j] = new VideoFrame()
+                            if (localCurrentSearchId == CurrentSearchId)
                             {
-                                Title = s.Snippet.Title,
-                                Time = s.Snippet.PublishedAt.Value,
-                                Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
-                                Thumbnail = thumb,
-                                FrameIndex = j
-                            };
-                        }
+                                ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
+                                {
+                                    Keyword = key.Keyword,
+                                    Frames = frames,
+                                    Total = searchResults.Count(),
+                                    Current = searchResults.Count() - i - 1,
+                                });
+                            }
 
-                        if (localCurrentSearchId == CurrentSearchId)
-                        {
-                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
+                            Parallel.ForEach(frames, (frame) =>
                             {
-                                Keyword = key.Keyword,
-                                Latest = frames[0],
-                                Total = searchResults.Count(),
-                                Current = searchResults.Count() - i - 1,
+                                try
+                                {
+                                    frame.TestResult = _classifier.Test(frame.Thumbnail); ;
+                                }
+                                catch (Exception ex)
+                                {
+                                    CommonTools.HandleException(ex);
+                                }
                             });
-                        }
 
-                        Parallel.ForEach(frames, (frame) =>
-                        {
-                            try
-                            {                                 
-                                frame.TestResult = _classifier.Test(frame.Thumbnail); ;                              
-                            }
-                            catch (Exception ex)
+                            if (localCurrentSearchId == CurrentSearchId)
                             {
-                                CommonTools.HandleException(ex);
+                                ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
+                                {
+                                    Keyword = key.Keyword,
+                                    Frames = frames,
+                                    Total = searchResults.Count(),
+                                    Current = searchResults.Count() - i - 1,
+                                });
                             }
-                        });
 
-                        if (localCurrentSearchId == CurrentSearchId)
-                        {
-                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
-                            {
-                                Keyword = key.Keyword,
-                                Latest = frames[0],
-                                Total = searchResults.Count(),
-                                Current = searchResults.Count() - i - 1,
-                            });
+                            key.LastUpdated = s.Snippet.PublishedAt.Value;
                         }
-
-                        key.LastUpdated = s.Snippet.PublishedAt.Value;
+                        catch (Exception ex)
+                        {
+                            CommonTools.HandleException(ex);
+                        }
                     }
 
                     key.LastUpdated = searchTime;

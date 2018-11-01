@@ -73,11 +73,16 @@ namespace CollectorUI
                 {
                     SaveSearchHistory(history);
 
+                    Array.Sort(p.Frames, new Comparison<VideoFrame>((VideoFrame a, VideoFrame b) =>
+                    {
+                        return b.Score.CompareTo(a.Score);
+                    }));
+
                     try
                     {
                         BitmapImage f = new BitmapImage();
                         f.BeginInit();
-                        f.UriSource = new Uri(p.Latest.Thumbnail);
+                        f.UriSource = new Uri(p.Frames[0].Thumbnail);
                         f.EndInit();
                         imgYouTubeCurrent.Source = f;
                     }
@@ -86,24 +91,24 @@ namespace CollectorUI
                         CommonTools.HandleException(ex);
                     }
 
-                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total} Frame {p.Latest.FrameIndex}\n{p.Latest.Title}\n{p.Latest.Time}\n";
+                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total} Frame {p.Frames[0].FrameIndex}\n{p.Frames[0].Title}\n{p.Frames[0].Time}\n";
 
-                    if (p.Latest.TestResult == null)
+                    if (p.Frames[0].TestResult == null)
                     {
                         lbYouTubeCurrentScore.Content = $"Validating....";
                     }
                     else
                     {
                         var str = "";
-                        foreach (var s in p.Latest.TestResult.Scores)
+                        foreach (var s in p.Frames[0].TestResult.Scores)
                         {
                             str = $"[{s.Key}] [{s.Value}]\n";
                         }
                         lbYouTubeCurrentScore.Content = str;
 
-                        if (p.Latest.TestResult.Scores[0].Key == selectedClass && p.Latest.TestResult.Scores[0].Value > pass)
+                        if (p.Frames[0].TestResult.Scores[0].Key == selectedClass && p.Frames[0].TestResult.Scores[0].Value > pass)
                         {
-                            _youtubeResults.Add(p.Latest);
+                            _youtubeResults.Insert(0, p.Frames[0]);
                         }
                     }
 
