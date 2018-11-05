@@ -26,31 +26,68 @@ namespace CollectorUI
 
         public int Current { get; set; }
 
-        public VideoFrame[] Frames { get; set; }
+        public VideoEntry Video { get; set; }
     }
 
-    public class VideoFrame
+    public class VideoEntry
     {
         public string Title { get; set; }
         public DateTime Time { get; set; }
-        public string Thumbnail { get; set; }
+
         public string Url { get; set; }
+
+        public VideoFrame[] Frames{get;set;}
+
+        public VideoFrame Frame0
+        {
+            get
+            {
+                return Frames[0];
+            }
+        }
+
+        public VideoFrame Frame1
+        {
+            get
+            {
+                return Frames[1];
+            }
+        }
+
+        public VideoFrame Frame2
+        {
+            get
+            {
+                return Frames[2];
+            }
+        }
+
+        public VideoFrame Frame3
+        {
+            get
+            {
+                return Frames[3];
+            }
+        }
+    }
+
+    public class VideoFrame
+    {     
+        public string Thumbnail { get; set; }
         public int FrameIndex { get; set; }
 
         public TestResult TestResult { get; set; }
 
-        public double Score
+        public string HighestScore
         {
             get
             {
                 if (TestResult != null)
                 {
-                    return TestResult.Scores[0].Value;
+                    return $"[{TestResult.Scores[0].Key}] [{TestResult.Scores[0].Value}]";
                 }
-                else
-                {
-                    return -1;
-                }
+
+                return "";
             }
         }
     }
@@ -79,10 +116,8 @@ namespace CollectorUI
 
         public Task Search(List<SearchHistory> history)
         {
-            CurrentSearchId = DateTime.Now.Ticks;
-            
             return Task.Run(() =>
-            {                
+            {
                 var localCurrentSearchId = CurrentSearchId;
 
                 foreach (var key in history)
@@ -94,52 +129,31 @@ namespace CollectorUI
 
                     CommonTools.Log(searchResults.Count() + " videos.");
 
-                    for (int i = searchResults.Count() - 1; i >= 0 && localCurrentSearchId == CurrentSearchId; i--)
+                    for (int i = searchResults.Count() - 1; i >= 0; i--)
                     {
                         try
                         {
                             var s = searchResults[i];
                             CommonTools.Log($"Video [{i}]");
 
-                            VideoFrame[] frames = new VideoFrame[4];
-                            for (int j = 0; j < 4; j++)
+                            var video = new VideoEntry()
                             {
-                                var urlThumb = "http://" + $"img.youtube.com/vi/{s.Id.VideoId}/{j}.jpg";
+                                Title = s.Snippet.Title,
+                                Time = s.Snippet.PublishedAt.Value,
+                                Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
+                            };
 
-                                var thumb = Path.Combine(_tempFolder, $"{s.Id.VideoId}_{j}.jpg");
-
-                                HttpWebRequest httpRequest = (HttpWebRequest)
-                                WebRequest.Create(urlThumb);
-                                httpRequest.Method = WebRequestMethods.Http.Get;
-
-                                using (Stream output = File.OpenWrite(thumb))
-                                using (Stream input = httpRequest.GetResponse().GetResponseStream())
-                                {
-                                    input.CopyTo(output);
-                                }
-
-                                frames[j] = new VideoFrame()
-                                {
-                                    Title = s.Snippet.Title,
-                                    Time = s.Snippet.PublishedAt.Value,
-                                    Url = $"https://" + $"www.youtube.com/watch?v={s.Id.VideoId}",
-                                    Thumbnail = thumb,
-                                    FrameIndex = j
-                                };
-                            }
-
-                            if (localCurrentSearchId == CurrentSearchId)
+                            video.Frames = GetFrames(s.Id.VideoId);
+                            
+                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
                             {
-                                ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
-                                {
-                                    Keyword = key.Keyword,
-                                    Frames = frames,
-                                    Total = searchResults.Count(),
-                                    Current = searchResults.Count() - i - 1,
-                                });
-                            }
+                                Keyword = key.Keyword,
+                                Video = video,
+                                Total = searchResults.Count(),
+                                Current = searchResults.Count() - i - 1,
+                            });
 
-                            Parallel.ForEach(frames, (frame) =>
+                            Parallel.ForEach(video.Frames, (frame) =>
                             {
                                 try
                                 {
@@ -151,16 +165,13 @@ namespace CollectorUI
                                 }
                             });
 
-                            if (localCurrentSearchId == CurrentSearchId)
+                            ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
                             {
-                                ProgressChanged?.Invoke(this, new YouTubeCrawlerProgress()
-                                {
-                                    Keyword = key.Keyword,
-                                    Frames = frames,
-                                    Total = searchResults.Count(),
-                                    Current = searchResults.Count() - i - 1,
-                                });
-                            }
+                                Keyword = key.Keyword,
+                                Video = video,
+                                Total = searchResults.Count(),
+                                Current = searchResults.Count() - i - 1,
+                            });
 
                             key.LastUpdated = s.Snippet.PublishedAt.Value;
                         }
@@ -175,6 +186,36 @@ namespace CollectorUI
             });
         }
 
+        private VideoFrame[] GetFrames(string id)
+        {
+            var ret = new VideoFrame[4];
+            for (int i = 0; i < 4; i++)
+            {
+                var urlThumb = "http://" + $"img.youtube.com/vi/{id}/{i}.jpg";
+                var thumb = Path.Combine(_tempFolder, $"{id}_{i}.jpg");
+
+                HttpWebRequest httpRequest = (HttpWebRequest)
+                WebRequest.Create(urlThumb);
+                httpRequest.Method = WebRequestMethods.Http.Get;
+
+                using (Stream output = File.OpenWrite(thumb))
+                using (Stream input = httpRequest.GetResponse().GetResponseStream())
+                {
+                    input.CopyTo(output);
+                }
+
+                var frame = new VideoFrame()
+                {
+                    FrameIndex = i,
+                    Thumbnail = thumb
+                };
+
+                ret[i] = frame;
+            }
+
+            return ret;
+        }
+
         private IList<SearchResult> FindVideo(string key, DateTime after)
         {
             var youtubeService = new YouTubeService(new BaseClientService.Initializer()
@@ -187,8 +228,9 @@ namespace CollectorUI
             var oldestFound = DateTime.Now;
             var num = 50;
 
-            while (num >= 40) 
+            while (num >= 40 && oldestFound > after) 
             {
+                CommonTools.Log($"before [{oldestFound}] after [{after}]" );
                 var searchListRequest = youtubeService.Search.List("snippet");
                 searchListRequest.Q = key; // Replace with your search term.
                 searchListRequest.MaxResults = 50;
@@ -199,7 +241,7 @@ namespace CollectorUI
                 var searchListResponse = searchListRequest.ExecuteAsync().Result;
                 var items = searchListResponse.Items.Where(s => s.Id.Kind == "youtube#video").ToArray();
                 num = items.Length;
-
+                
                 if (items.Length > 0)
                 {
                     oldestFound = items[items.Length - 1].Snippet.PublishedAt.Value;

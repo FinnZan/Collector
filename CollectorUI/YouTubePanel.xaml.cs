@@ -15,31 +15,40 @@ namespace CollectorUI
     /// </summary>
     public partial class YouTubePanel : UserControl
     {
-        private ObservableCollection<VideoFrame> _youtubeResults = new ObservableCollection<VideoFrame>();                
+        private ObservableCollection<VideoEntry> _youtubeResults = new ObservableCollection<VideoEntry>();                
 
         public YouTubePanel()
         {
             InitializeComponent();
 
-            _youtubeResults = new ObservableCollection<VideoFrame>();
+            _youtubeResults = new ObservableCollection<VideoEntry>();
             lbxYouTubeResults.ItemsSource = _youtubeResults;
 
-            EventManager.RegisterClassHandler(typeof(ListBoxItem), ListBoxItem.MouseLeftButtonDownEvent, new RoutedEventHandler((object o, RoutedEventArgs arg) =>
+            EventManager.RegisterClassHandler(typeof(ListBoxItem), ListBoxItem.MouseDoubleClickEvent, new RoutedEventHandler((object o, RoutedEventArgs arg) =>
             {
-                try
+                if ((o as ListBoxItem).Content is VideoEntry v)
                 {
-                    System.Diagnostics.Process.Start(((VideoFrame)lbxYouTubeResults.SelectedItem).Url);
-                }
-                catch (Exception ex)
-                {
-                    CommonTools.HandleException(ex);
+                    try
+                    {
+                        System.Diagnostics.Process.Start(v.Url);
+                    }
+                    catch (Exception ex)
+                    {
+                        CommonTools.HandleException(ex);
+                    }
                 }
             }));
         }
 
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            cbxGroup.ItemsSource = Global.Classifier.Classes;
+            cbxGroup.SelectedIndex = 0;
+        }
+
         private void btStartYouTube_Click(object sender, RoutedEventArgs e)
         {
-            var selectedClass = tbxGroup.Text;
+            string selectedClass = (string)cbxGroup.SelectedItem;
             var pass = double.Parse(tbxPass.Text);
             var days = int.Parse(tbxDays.Text);
 
@@ -73,44 +82,27 @@ namespace CollectorUI
                 {
                     SaveSearchHistory(history);
 
-                    Array.Sort(p.Frames, new Comparison<VideoFrame>((VideoFrame a, VideoFrame b) =>
-                    {
-                        return b.Score.CompareTo(a.Score);
-                    }));
+                    imgFrame0.Source = MakeBitmapImage(p.Video.Frame0.Thumbnail);
+                    imgFrame1.Source = MakeBitmapImage(p.Video.Frame1.Thumbnail);
+                    imgFrame2.Source = MakeBitmapImage(p.Video.Frame2.Thumbnail);
+                    imgFrame3.Source = MakeBitmapImage(p.Video.Frame3.Thumbnail);
 
-                    try
-                    {
-                        BitmapImage f = new BitmapImage();
-                        f.BeginInit();
-                        f.UriSource = new Uri(p.Frames[0].Thumbnail);
-                        f.EndInit();
-                        imgYouTubeCurrent.Source = f;
-                    }
-                    catch (Exception ex)
-                    {
-                        CommonTools.HandleException(ex);
-                    }
+                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total}\n{p.Video.Title}\n{p.Video.Time}\n";
 
-                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total} Frame {p.Frames[0].FrameIndex}\n{p.Frames[0].Title}\n{p.Frames[0].Time}\n";
+                    lbYouTubeCurrentScore.Content = "";
 
-                    if (p.Frames[0].TestResult == null)
+                    foreach (var f in p.Video.Frames)
                     {
-                        lbYouTubeCurrentScore.Content = $"Validating....";
-                    }
-                    else
-                    {
-                        var str = "";
-                        foreach (var s in p.Frames[0].TestResult.Scores)
+                        if (f.TestResult != null)
                         {
-                            str = $"[{s.Key}] [{s.Value}]\n";
+                            lbYouTubeCurrentScore.Content += $"[{f.TestResult.Scores[0].Key}] [{f.TestResult.Scores[0].Value}]\n";
+                            if (f.TestResult.Scores[0].Key == selectedClass && f.TestResult.Scores[0].Value > pass)
+                            {
+                                _youtubeResults.Insert(0, p.Video);
+                                break;
+                            }
                         }
-                        lbYouTubeCurrentScore.Content = str;
-
-                        if (p.Frames[0].TestResult.Scores[0].Key == selectedClass && p.Frames[0].TestResult.Scores[0].Value > pass)
-                        {
-                            _youtubeResults.Insert(0, p.Frames[0]);
-                        }
-                    }
+                    }                
 
                     pbYouTube.Maximum = p.Total;
                     pbYouTube.Minimum = 0;
@@ -141,6 +133,11 @@ namespace CollectorUI
             {
                 CommonTools.HandleException(ex);
             }
+        }
+        
+        private void btClear_Click(object sender, RoutedEventArgs e)
+        {
+            _youtubeResults.Clear();
         }
 
         private List<SearchHistory> ReadSearchHistory()
@@ -212,6 +209,30 @@ namespace CollectorUI
             {
                 CommonTools.HandleException(ex);
             }
+        }
+        
+        private BitmapImage MakeBitmapImage(string file)
+        {
+            try
+            {
+                BitmapImage f = new BitmapImage();
+                f.BeginInit();
+                f.UriSource = new Uri(file);
+                f.EndInit();
+                return f;
+            }
+            catch (Exception ex)
+            {
+                CommonTools.HandleException(ex);
+                return null;
+            }
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var v = (VideoEntry)lbxYouTubeResults.SelectedItem;
+
+            
         }
     }
 }

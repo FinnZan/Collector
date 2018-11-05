@@ -10,6 +10,11 @@ namespace CollectorUI
     public class TestResult
     {
         public List<KeyValuePair<string, double>> Scores = new List<KeyValuePair<string, double>>();
+
+        public override string ToString()
+        {
+            return $"[{Scores[0].Key}] [{Scores[0].Value}]";
+        }
     }
 
     public class Classifier
@@ -30,6 +35,8 @@ namespace CollectorUI
 
         public string SummariesDir { get; private set; }
 
+        public string[] Classes { get; set; }
+
         public Classifier(string name, string img_dir, string working_dir, string python_dir)
         {
             ImageDir = img_dir;
@@ -40,6 +47,13 @@ namespace CollectorUI
             OutputGraph = Path.Combine(working_dir, $"{name}_graph.pb");
             OutputLabels = Path.Combine(working_dir, $"{name}_lables.txt");
             SummariesDir = Path.Combine(working_dir, $"logs");
+
+            var folders = Directory.GetDirectories(BottleneckDir);
+            Classes = new string[folders.Length];
+            for (int i = 0; i < folders.Length; i++)
+            {
+                Classes[i] = Path.GetFileName(folders[i]);
+            }
 
             if (!Directory.Exists(BottleneckDir))
             {
@@ -140,7 +154,7 @@ namespace CollectorUI
             if (!process.StandardOutput.EndOfStream)
             {
                 var output = process.StandardOutput.ReadToEnd();
-                CommonTools.Log(output);
+                CommonTools.Log(output.Trim());
 
                 var pairs = output.Split('\n');
                 foreach (var p in pairs)
