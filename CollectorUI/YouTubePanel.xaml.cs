@@ -47,10 +47,11 @@ namespace CollectorUI
         }
 
         private void btStartYouTube_Click(object sender, RoutedEventArgs e)
-        {
-            string selectedClass = (string)cbxGroup.SelectedItem;
-            var pass = double.Parse(tbxPass.Text);
+        {           
             var days = int.Parse(tbxDays.Text);
+
+            Global.Classifier.SelectedClass = (string)cbxGroup.SelectedItem;
+            Global.Classifier.TheBar = double.Parse(tbxPass.Text);
 
             var youTubeCrawler = new YouTubeCrawler(Global.Classifier, Global.WorkingFolder);                                  
             
@@ -82,27 +83,14 @@ namespace CollectorUI
                 {
                     SaveSearchHistory(history);
 
-                    imgFrame0.Source = MakeBitmapImage(p.Video.Frame0.Thumbnail);
-                    imgFrame1.Source = MakeBitmapImage(p.Video.Frame1.Thumbnail);
-                    imgFrame2.Source = MakeBitmapImage(p.Video.Frame2.Thumbnail);
-                    imgFrame3.Source = MakeBitmapImage(p.Video.Frame3.Thumbnail);
+                    currentVideo.DataContext = p.Video;
 
-                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total}\n{p.Video.Title}\n{p.Video.Time}\n";
+                    lbYouTubeCurrent.Content = $"Video of [{p.Keyword}] {p.Current + 1}/{p.Total}\n";
 
-                    lbYouTubeCurrentScore.Content = "";
-
-                    foreach (var f in p.Video.Frames)
+                    if (p.Video.Frames.Any(f => f.TestResult != null && f.TestResult.IsMatch))
                     {
-                        if (f.TestResult != null)
-                        {
-                            lbYouTubeCurrentScore.Content += $"[{f.TestResult.Scores[0].Key}] [{f.TestResult.Scores[0].Value}]\n";
-                            if (f.TestResult.Scores[0].Key == selectedClass && f.TestResult.Scores[0].Value > pass)
-                            {
-                                _youtubeResults.Insert(0, p.Video);
-                                break;
-                            }
-                        }
-                    }                
+                        _youtubeResults.Insert(0, p.Video);
+                    }
 
                     pbYouTube.Maximum = p.Total;
                     pbYouTube.Minimum = 0;
@@ -113,7 +101,6 @@ namespace CollectorUI
             // UI ==========================
             _youtubeResults.Clear();
             lbYouTubeCurrent.Content = string.Empty;
-            lbYouTubeCurrentScore.Content = string.Empty;
             pbYouTube.Visibility = Visibility.Visible;                                
 
             try

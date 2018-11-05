@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="CollectorUI.YouTubeVideoItem"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:CollectorUI"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.Resources>
+            <local:PassFailColorConverter x:Key="PassFailColorConverter" />
+        </Grid.Resources>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal">
+                <Label FontWeight="Bold" Content="{Binding Title}"></Label>
+                <Label Content="{Binding Time}"></Label>
+                <Label FontWeight="Bold" FontSize="20" Content="{Binding HighestScore}"></Label>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Grid Width="160" Height="150" Margin="1">
+                    <Image Width="160" Height="120" VerticalAlignment="Top" Margin="1" Source="{Binding Frame0.Thumbnail}"></Image>
+                    <Label Height="30" VerticalAlignment="Bottom" Content="{Binding Frame0.HighestScore}" Foreground="{Binding Frame0.TestResult.IsMatch, Converter={StaticResource PassFailColorConverter}}"></Label>
+                </Grid>
+                <Grid Width="160" Height="150" Margin="1" IsEnabled="{Binding Frame1.TestResult.IsMatched}">
+                    <Image Width="160" Height="120" VerticalAlignment="Top" Margin="1" Source="{Binding Frame1.Thumbnail}"></Image>
+                    <Label Height="30" VerticalAlignment="Bottom" Content="{Binding Frame1.HighestScore}" Foreground="{Binding Frame1.TestResult.IsMatch, Converter={StaticResource PassFailColorConverter}}"></Label>
+                </Grid>
+                <Grid Width="160" Height="150" Margin="1" IsEnabled="{Binding Frame2.TestResult.IsMatched}">
+                    <Image Width="160" Height="120" VerticalAlignment="Top" Margin="1" Source="{Binding Frame2.Thumbnail}"></Image>
+                    <Label Height="30" VerticalAlignment="Bottom" Content="{Binding Frame2.HighestScore}" Foreground="{Binding Frame2.TestResult.IsMatch, Converter={StaticResource PassFailColorConverter}}"></Label>
+                </Grid>
+                <Grid Width="160" Height="150" Margin="1" IsEnabled="{Binding Frame3.TestResult.IsMatched}">
+                    <Image Width="160" Height="120" VerticalAlignment="Top" Margin="1" Source="{Binding Frame3.Thumbnail}"></Image>
+                    <Label Height="30" VerticalAlignment="Bottom" Content="{Binding Frame3.HighestScore}" Foreground="{Binding Frame3.TestResult.IsMatch, Converter={StaticResource PassFailColorConverter}}"></Label>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -11,6 +11,8 @@ namespace CollectorUI
     {
         public List<KeyValuePair<string, double>> Scores = new List<KeyValuePair<string, double>>();
 
+        public bool IsMatch { get; set; } = false;
+
         public override string ToString()
         {
             return $"[{Scores[0].Key}] [{Scores[0].Value}]";
@@ -37,6 +39,10 @@ namespace CollectorUI
 
         public string[] Classes { get; set; }
 
+        public string SelectedClass { get; set; }
+
+        public double TheBar { get; set; }
+
         public Classifier(string name, string img_dir, string working_dir, string python_dir)
         {
             ImageDir = img_dir;
@@ -48,7 +54,7 @@ namespace CollectorUI
             OutputLabels = Path.Combine(working_dir, $"{name}_lables.txt");
             SummariesDir = Path.Combine(working_dir, $"logs");
 
-            var folders = Directory.GetDirectories(BottleneckDir);
+            var folders = Directory.GetDirectories(ImageDir);
             Classes = new string[folders.Length];
             for (int i = 0; i < folders.Length; i++)
             {
@@ -171,21 +177,47 @@ namespace CollectorUI
                     {
                         CommonTools.HandleException(ex);
                     }                    
-                }
+                }                          
 
                 ret.Scores.Sort(new Comparison<KeyValuePair<string, double>>((KeyValuePair<string, double> a, KeyValuePair<string, double> b) =>
                 {
                     return b.Value.CompareTo(a.Value);
                 }));
+
+                if (ret.Scores[0].Key == SelectedClass && ret.Scores[0].Value > TheBar)
+                {
+                    ret.IsMatch = true;
+                }
             }
 
             if (!process.StandardError.EndOfStream)
             {
                 var error = process.StandardError.ReadToEnd();
                 CommonTools.Log($"Error [{error}]");
-            }
+            }          
             
             return ret;
+        }
+
+        public void AddImage(string file, string classname)
+        {
+            try
+            {
+                foreach (var d in Directory.GetDirectories(ImageDir))
+                {
+                    if (Path.GetFileName(d) == classname)
+                    {
+                        var fn = Path.GetFileName(file);
+                        var nfn = Path.Combine(d, fn);
+                        File.Copy(file, nfn);
+                        CommonTools.Log($"Copy [{file}] to [{nfn}]");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                CommonTools.HandleException(ex);
+            }
         }
 
         public void Stop()
